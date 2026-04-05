@@ -1,1 +1,287 @@
-
+{
+    "meta": {
+        "version": "2.0",
+        "description": "Layer 2 - Pattern-based attack detection",
+        "last_update": "2026-04-05"
+    },
+    "patterns": {
+        "sql_injection": {
+            "enabled": true,
+            "severity": "critical",
+            "risk_score": 95,
+            "category": "injection",
+            "signatures": [
+                "UNION SELECT",
+                "OR 1=1",
+                "DROP TABLE",
+                "'; DROP",
+                "\" OR \"\"=\"",
+                "' OR ''='",
+                "' OR '1'='1",
+                "admin'--",
+                "' UNION SELECT NULL",
+                "1' AND '1'='1"
+            ],
+            "regex_patterns": [
+                "(?i)(union\\s+select|drop\\s+table|insert\\s+into)",
+                "(?i)(exec\\s*\\(|execute\\s*\\()",
+                "(?i)(or\\s+['\"]?1['\"]?\\s*=\\s*['\"]?1)"
+            ],
+            "action": "block",
+            "log_level": "critical"
+        },
+        "xss_attack": {
+            "enabled": true,
+            "severity": "high",
+            "risk_score": 85,
+            "category": "injection",
+            "signatures": [
+                "<script>",
+                "javascript:",
+                "onerror=",
+                "onload=",
+                "<iframe",
+                "eval(",
+                "alert(",
+                "document.cookie",
+                "<img src=x onerror="
+            ],
+            "regex_patterns": [
+                "(?i)<script[^>]*>.*?</script>",
+                "(?i)on(error|load|click|mouse)\\s*=",
+                "(?i)javascript:\\s*",
+                "(?i)<iframe[^>]*>"
+            ],
+            "action": "block",
+            "log_level": "high"
+        },
+        "path_traversal": {
+            "enabled": true,
+            "severity": "high",
+            "risk_score": 80,
+            "category": "file_access",
+            "signatures": [
+                "../",
+                "..\\",
+                "/etc/passwd",
+                "/etc/shadow",
+                "C:\\Windows",
+                "%2e%2e%2f",
+                "..%5c"
+            ],
+            "regex_patterns": [
+                "(?i)(\\.\\./|\\.\\.\\\\)",
+                "(?i)(/etc/passwd|/etc/shadow)",
+                "(?i)%2e%2e(%2f|%5c)"
+            ],
+            "action": "block",
+            "log_level": "high"
+        },
+        "command_injection": {
+            "enabled": true,
+            "severity": "critical",
+            "risk_score": 98,
+            "category": "injection",
+            "signatures": [
+                "| bash",
+                "; whoami",
+                "& ping",
+                "`cat /etc/passwd`",
+                "$(cat /etc/passwd)",
+                "; rm -rf",
+                "| nc ",
+                "bash -i",
+                "/bin/sh"
+            ],
+            "regex_patterns": [
+                "(?i)(;|\\||&|`|\\$\\()(cat|ls|whoami|curl|wget|nc|bash|sh)",
+                "(?i)bash\\s+-[ci]",
+                "(?i)/bin/(bash|sh|dash)"
+            ],
+            "action": "block",
+            "log_level": "critical"
+        },
+        "reverse_shell": {
+            "enabled": true,
+            "severity": "critical",
+            "risk_score": 99,
+            "category": "exploitation",
+            "signatures": [
+                "nc -e /bin/sh",
+                "bash -i >& /dev/tcp",
+                "/bin/bash -c",
+                "python -c 'import socket",
+                "perl -e 'use Socket",
+                "ruby -rsocket"
+            ],
+            "regex_patterns": [
+                "(?i)nc\\s+.*-e\\s+/bin/(sh|bash)",
+                "(?i)bash\\s+-i\\s+>&\\s+/dev/tcp",
+                "(?i)(python|perl|ruby).*socket"
+            ],
+            "action": "block",
+            "log_level": "critical"
+        },
+        "reconnaissance": {
+            "enabled": true,
+            "severity": "high",
+            "risk_score": 75,
+            "category": "scanning",
+            "signatures": [
+                "nmap",
+                "masscan",
+                "nikto",
+                "sqlmap",
+                "gobuster",
+                "dirb",
+                "wpscan",
+                "burpsuite"
+            ],
+            "regex_patterns": [
+                "(?i)(nmap|masscan|nikto|sqlmap|gobuster|dirb)"
+            ],
+            "action": "block",
+            "log_level": "high"
+        },
+        "ldap_injection": {
+            "enabled": true,
+            "severity": "high",
+            "risk_score": 80,
+            "category": "injection",
+            "signatures": [
+                "*)(uid=*",
+                "*(|(uid=*))",
+                "admin*",
+                "*)(objectClass=*"
+            ],
+            "regex_patterns": [
+                "(?i)\\*\\)\\(.*=.*\\)",
+                "(?i)\\(\\|\\(.*=.*\\)\\)"
+            ],
+            "action": "block",
+            "log_level": "high"
+        },
+        "xxe_injection": {
+            "enabled": true,
+            "severity": "critical",
+            "risk_score": 90,
+            "category": "injection",
+            "signatures": [
+                "<!DOCTYPE",
+                "<!ENTITY",
+                "SYSTEM \"file://",
+                "SYSTEM \"http://",
+                "<?xml"
+            ],
+            "regex_patterns": [
+                "(?i)<!ENTITY.*SYSTEM",
+                "(?i)<!DOCTYPE.*\\[.*<!ENTITY"
+            ],
+            "action": "block",
+            "log_level": "critical"
+        },
+        "ssrf_attempt": {
+            "enabled": true,
+            "severity": "high",
+            "risk_score": 85,
+            "category": "network",
+            "signatures": [
+                "http://localhost",
+                "http://127.0.0.1",
+                "http://0.0.0.0",
+                "http://169.254.169.254",
+                "file:///",
+                "gopher://"
+            ],
+            "regex_patterns": [
+                "(?i)(http|https)://(localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0)",
+                "(?i)http://169\\.254\\.169\\.254",
+                "(?i)(file|gopher|dict)://"
+            ],
+            "action": "block",
+            "log_level": "high"
+        },
+        "malicious_user_agent": {
+            "enabled": true,
+            "severity": "medium",
+            "risk_score": 60,
+            "category": "scanning",
+            "signatures": [
+                "sqlmap",
+                "nikto",
+                "nmap",
+                "masscan",
+                "acunetix",
+                "nessus",
+                "openvas",
+                "metasploit"
+            ],
+            "action": "block",
+            "log_level": "medium"
+        },
+        "suspicious_file_upload": {
+            "enabled": true,
+            "severity": "critical",
+            "risk_score": 90,
+            "category": "file_upload",
+            "file_extensions": [
+                ".php",
+                ".jsp",
+                ".asp",
+                ".aspx",
+                ".exe",
+                ".bat",
+                ".sh",
+                ".ps1",
+                ".py",
+                ".rb"
+            ],
+            "mime_type_mismatch": true,
+            "action": "block",
+            "log_level": "critical"
+        },
+        "http_method_abuse": {
+            "enabled": true,
+            "severity": "medium",
+            "risk_score": 50,
+            "category": "protocol",
+            "blocked_methods": [
+                "TRACE",
+                "TRACK",
+                "DEBUG",
+                "CONNECT"
+            ],
+            "action": "block",
+            "log_level": "medium"
+        },
+        "sensitive_data_exposure": {
+            "enabled": true,
+            "severity": "high",
+            "risk_score": 80,
+            "category": "data_leak",
+            "patterns": [
+                ".git/config",
+                ".env",
+                ".htaccess",
+                "web.config",
+                "phpinfo()",
+                "wp-config.php",
+                ".sql",
+                "backup.tar.gz"
+            ],
+            "action": "block",
+            "log_level": "high"
+        }
+    },
+    "response_settings": {
+        "block_response": {
+            "status_code": 403,
+            "message": "Request blocked by security policy",
+            "include_rule_id": false
+        },
+        "rate_limit_response": {
+            "status_code": 429,
+            "message": "Too many requests"
+        }
+    }
+}
