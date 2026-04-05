@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+    # Redis - Fast cache for Layer 1
+    redis:
+        image: redis:alpine
+        container_name: security-redis
+        ports:
+            - "6379:6379"
+        networks:
+            sec-network:
+                ipv4_address: 192.168.100.40
+        restart: unless-stopped
+        healthcheck:
+            test: [ "CMD", "redis-cli", "ping" ]
+            interval: 10s
+            timeout: 3s
+            retries: 3
+
+    # Web Server - Vulnerable Flask app + Layer 1 & 2
+    web-server:
+        build:
+            context: ./web-server
+            dockerfile: Dockerfile
+        container_name: security-web
+        ports:
+            - "5000:5000" # Flask app
+        environment:
+            - REDIS_HOST=192.168.100.40
+            - REDIS_PORT=6379
+            - AI_SERVER_URL=http://192.168.100.10:8000
+            - ADMIN_API_KEY=${ADMIN_API_KEY}
+            - FLASK_ENV=development
+        networks:
+            sec-network:
+                ipv4_address: 192.168.100.20
+        depends_on:
+            redis:
+                condition: service_healthy
+        restart: unless-stopped
+        volumes:
+            - ./web-server:/app # Live code reload during development
+            - web-logs:/var/log # Persist logs
+
+    # AI Server - Layer 3 detection engine
+    ai-server:
+        build:
+            context: ./ai-server
+            dockerfile: Dockerfile
+        container_name: security-ai
+        ports:
+            - "8000:8000" # FastAPI
+        environment:
+            - OLLAMA_HOST=0.0.0.0
+            - REDIS_HOST=192.168.100.40
+        networks:
+            sec-network:
+                ipv4_address: 192.168.100.10
+        restart: unless-stopped
+        volumes:
+            - ./ai-server:/app # Live code reload
+            - ai-models:/models # Persist AI models
+            - ai-logs:/logs # Persist logs
+    # Uncomment if you have GPU
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+    # Attacker - Kali Linux for testing (optional, add later)
+    # attacker:
+    #   image: kalilinux/kali-rolling
+    #   container_name: security-attacker
+    #   networks:
+    #     sec-network:
+    #       ipv4_address: 192.168.100.30
+    #   command: tail -f /dev/null
+    #   tty: true
+    #   stdin_open: true
+
+networks:
+    sec-network:
+        driver: bridge
+        ipam:
+            config:
+                - subnet: 192.168.100.0/24
+
+volumes:
+    web-logs:
+        driver: local
+    ai-models:
+        driver: local
+    ai-logs:
+        driver: local
