@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Security WAF Dashboard</title>
+    <!-- Use a modern, beautiful web font -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0f172a;
+            --glass-bg: rgba(30, 41, 59, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent-glow: #3b82f6;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+            padding-bottom: 3rem;
+        }
+
+        /* Dynamic background blobs for premium aesthetic */
+        .blob {
+            position: absolute;
+            filter: blur(120px);
+            opacity: 0.5;
+            z-index: -1;
+            animation: float 20s infinite ease-in-out alternate;
+        }
+
+        .blob-1 {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            width: 40vw;
+            height: 40vw;
+            top: -10vw;
+            left: -10vw;
+            border-radius: 50%;
+        }
+
+        .blob-2 {
+            background: linear-gradient(135deg, #ef4444, #f59e0b);
+            width: 30vw;
+            height: 30vw;
+            bottom: -5vw;
+            right: -5vw;
+            border-radius: 50%;
+            animation-delay: -5s;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            100% {
+                transform: translate(10vw, 5vh) scale(1.1);
+            }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        h1 {
+            font-weight: 800;
+            font-size: 2.5rem;
+            letter-spacing: -0.5px;
+        }
+
+        h1 span {
+            background: linear-gradient(to right, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            background: var(--glass-bg);
+            padding: 0.5rem 1rem;
+            border-radius: 999px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .pulse-dot {
+            width: 10px;
+            height: 10px;
+            background-color: var(--success);
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 10px var(--success);
+            animation: pulse-green 2s infinite;
+        }
+
+        .status-badge.error .pulse-dot {
+            background-color: var(--danger);
+            box-shadow: 0 0 10px var(--danger);
+            animation: pulse-red 1s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        @keyframes pulse-red {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+
+        /* Glassmorphism Cards */
+        .glass-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Layout Grids */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .detailed-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .detailed-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Typography & Values inside cards */
+        .glass-card h3 {
+            color: var(--text-muted);
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .glass-card h2 {
+            font-size: 1.4rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stat-value {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(to bottom, #ffffff, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
+        }
+
+        .stat-value.danger {
+            background: linear-gradient(to bottom, #fca5a5, #ef4444);
+            -webkit-background-clip: text;
+        }
+
+        /* Lists */
+        ul.list {
+            list-style: none;
+        }
+
+        ul.list li {
+            padding: 1rem;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            margin-bottom: 0.8rem;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        ul.list li:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--glass-border);
+            transform: scale(1.01);
+        }
+
+        .tag {
+            padding: 0.3rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .tag-critical {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        .tag-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fcd34d;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+
+        .tag-info {
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+            border: 1px solid rgba(59, 130, 246, 0.4);
+        }
+
+        .time-muted {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 2rem 0;
+            font-style: italic;
+        }
+
+        /* Admin Management Panel */
+        .admin-panel {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem 2rem;
+            margin-top: 2rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+            backdrop-filter: blur(10px);
+        }
+
+        .admin-panel h3 {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        .admin-panel input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: #fff;
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            outline: none;
+            font-family: inherit;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .admin-panel input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .admin-panel button {
+            background: var(--accent-glow);
+            color: #fff;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .admin-panel button:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+        
+        .admin-panel button.btn-danger {
+            background: var(--danger);
+        }
+        
+        .admin-panel button.btn-danger:hover {
+            box-shadow: 0 0 10px var(--danger);
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <div class="container">
+        <header>
+            <h1>AI Security WAF <span>Dashboard</span></h1>
+            <div id="status-badge" class="status-badge">
+                <div class="pulse-dot"></div>
+                <span id="status-text">System Active</span>
+            </div>
+        </header>
+
+        <div class="stats-grid">
+            <div class="glass-card">
+                <h3>Total Intercepts</h3>
+                <div class="stat-value" id="val-total-attacks">0</div>
+            </div>
+            <div class="glass-card">
+                <h3>Active Blocks (Temp)</h3>
+                <div class="stat-value danger" id="val-temp-blocks">0</div>
+            </div>
+            <div class="glass-card">
+                <h3>Permanent Bans</h3>
+                <div class="stat-value danger" id="val-perm-blocks">0</div>
+            </div>
+            <div class="glass-card">
+                <h3>Active Rate Limits</h3>
+                <div class="stat-value" id="val-rate-limits">0</div>
+            </div>
+        </div>
+
+        <div class="detailed-grid">
+            <div class="glass-card">
+                <h2>Top Offenders (IP Reputation)</h2>
+                <ul id="top-offenders-list" class="list">
+                    <li class="empty-state">Loading data...</li>
+                </ul>
+            </div>
+            <div class="glass-card">
+                <h2>Recent Attack Logs</h2>
+                <ul id="recent-attacks-list" class="list">
+                    <li class="empty-state">Loading data...</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="admin-panel">
+            <h3>🛡️ Threat Management Control</h3>
+            <input type="password" id="admin-api-key" placeholder="Enter ADMIN_API_KEY">
+            <input type="text" id="target-ip" placeholder="Target IP Address">
+            <button onclick="executeAdminAction('block')" class="btn-danger">Block IP</button>
+            <button onclick="executeAdminAction('unblock')">Unblock IP</button>
+        </div>
+    </div>
+
+    <script>
+        // Number Animation Helper
+        function animateValue(obj, start, end, duration) {
+            if (start === end) return;
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = Math.floor(progress * (end - start) + start);
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    obj.innerHTML = end;
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        // Store active values globally to animate transitions
+        const currentVals = {
+            total: 0,
+            temp: 0,
+            perm: 0,
+            rate: 0
+        };
+
+        function timeAgo(timestamp) {
+            const seconds = Math.floor((new Date() - new Date(timestamp * 1000)) / 1000);
+            if (seconds < 60) return seconds + 's ago';
+            if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+            return Math.floor(seconds / 3600) + 'h ago';
+        }
+
+        async function fetchDashboardData() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+
+                if (data.error) {
+                    document.getElementById('status-badge').className = 'status-badge error';
+                    document.getElementById('status-text').innerText = 'Redis Offline';
+                    return;
+                }
+
+                // Update Status
+                document.getElementById('status-badge').className = 'status-badge';
+                document.getElementById('status-text').innerText = 'System Active';
+
+                // Animate Numbers
+                const totalEl = document.getElementById('val-total-attacks');
+                if (data.total_attacks_logged !== currentVals.total) {
+                    animateValue(totalEl, currentVals.total, data.total_attacks_logged, 500);
+                    currentVals.total = data.total_attacks_logged;
+                }
+
+                const tempEl = document.getElementById('val-temp-blocks');
+                if (data.temporary_blocks !== currentVals.temp) {
+                    animateValue(tempEl, currentVals.temp, data.temporary_blocks, 500);
+                    currentVals.temp = data.temporary_blocks;
+                }
+
+                const permEl = document.getElementById('val-perm-blocks');
+                if (data.permanent_blocks !== currentVals.perm) {
+                    animateValue(permEl, currentVals.perm, data.permanent_blocks, 500);
+                    currentVals.perm = data.permanent_blocks;
+                }
+
+                const rateEl = document.getElementById('val-rate-limits');
+                if (data.active_rate_limits !== currentVals.rate) {
+                    animateValue(rateEl, currentVals.rate, data.active_rate_limits, 500);
+                    currentVals.rate = data.active_rate_limits;
+                }
+
+                // Update Offenders List
+                const offendersList = document.getElementById('top-offenders-list');
+                if (data.top_offenders && data.top_offenders.length > 0) {
+                    offendersList.innerHTML = data.top_offenders.map(o => `
+                        <li>
+                            <div style="font-family: monospace; font-size: 1.1rem; color: #fff;">${o.ip}</div>
+                            <div class="tag tag-warning">Score: ${o.score}</div>
+                        </li>
+                    `).join('');
+                } else {
+                    offendersList.innerHTML = '<li class="empty-state">No offenders logged yet.</li>';
+                }
+
+                // Update Recent Attacks List
+                const attacksList = document.getElementById('recent-attacks-list');
+                if (data.recent_attacks && data.recent_attacks.length > 0) {
+                    attacksList.innerHTML = data.recent_attacks.map(a => {
+                        let tagClass = 'tag-info';
+                        let shortReason = a.reason;
+                        if (a.reason.toLowerCase().includes('ai')) tagClass = 'tag-critical';
+                        if (a.reason.toLowerCase().includes('pattern')) tagClass = 'tag-warning';
+
+                        return `
+                        <li>
+                            <div>
+                                <div style="font-family: monospace; color: #fff; margin-bottom: 4px;">${a.ip}</div>
+                                <div class="time-muted">${timeAgo(a.timestamp)}</div>
+                            </div>
+                            <div class="tag ${tagClass}" style="max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                ${shortReason}
+                            </div>
+                        </li>
+                        `;
+                    }).join('');
+                } else {
+                    attacksList.innerHTML = '<li class="empty-state">No recent attacks logged.</li>';
+                }
+
+            } catch (err) {
+                console.error("Dashboard error:", err);
+                document.getElementById('status-badge').className = 'status-badge error';
+                document.getElementById('status-text').innerText = 'Connection Error';
+            }
+        }
+
+        // Fetch immediately, then every 2 seconds
+        fetchDashboardData();
+        setInterval(fetchDashboardData, 2000);
+
+        // Admin functionality
+        async function executeAdminAction(action) {
+            const apiKey = document.getElementById('admin-api-key').value;
+            const targetIp = document.getElementById('target-ip').value.trim();
+
+            if (!apiKey || !targetIp) {
+                alert("Please enter both the API Key and the Target IP.");
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/admin/${action}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({ ip: targetIp })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('Command Successful: ' + result.message);
+                    fetchDashboardData(); // Rapid refresh
+                    document.getElementById('target-ip').value = '';
+                } else {
+                    alert('Failed: ' + (result.detail || 'Access Denied'));
+                }
+            } catch(e) {
+                alert('Connection error with Dashboard Backend.');
+            }
+        }
+    </script>
+</body>
+
+</html>
