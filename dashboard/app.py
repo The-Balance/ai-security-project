@@ -86,14 +86,8 @@ async def fetch_stats():
 class AdminAction(BaseModel):
     ip: str
 
-def verify_admin(authorization: str):
-    expected_key = os.getenv('ADMIN_API_KEY')
-    if expected_key and authorization != f"Bearer {expected_key}":
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
 @app.post("/api/admin/block")
-async def block_ip(action: AdminAction, authorization: str = Header(None)):
-    verify_admin(authorization)
+async def block_ip(action: AdminAction):
     if globals().get('r') is None:
         raise HTTPException(status_code=503, detail="Redis unavailable")
     
@@ -104,8 +98,7 @@ async def block_ip(action: AdminAction, authorization: str = Header(None)):
     return {"status": "success", "message": f"IP {action.ip} blocked permanently."}
 
 @app.post("/api/admin/unblock")
-async def unblock_ip(action: AdminAction, authorization: str = Header(None)):
-    verify_admin(authorization)
+async def unblock_ip(action: AdminAction):
     if globals().get('r') is None:
         raise HTTPException(status_code=503, detail="Redis unavailable")
     

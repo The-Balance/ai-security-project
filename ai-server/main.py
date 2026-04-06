@@ -85,7 +85,7 @@ class HeuristicAnalyzer:
         # Check for suspicious patterns
         for pattern in suspicious_patterns:
             if pattern.upper() in content_upper:
-                logger.warning(f"🔍 Heuristic detected: {pattern}")
+                logger.warning(f"Heuristic detected: {pattern}")
                 return AnalysisResponse(
                     is_malicious=True,
                     confidence=0.7,
@@ -234,10 +234,10 @@ Be concise and direct."""
 
 if Config.USE_OLLAMA:
     analyzer = OllamaAnalyzer()
-    logger.info("🤖 Using Ollama AI for analysis")
+    logger.info("Using Ollama AI for analysis")
 else:
     analyzer = None
-    logger.info("🔍 Using heuristic analysis (Ollama disabled)")
+    logger.info("Using heuristic analysis (Ollama disabled)")
 
 
 # ==================== API ENDPOINTS ====================
@@ -258,7 +258,7 @@ async def analyze_request(request: AnalysisRequest):
     # Log analysis
     duration = (datetime.now() - start_time).total_seconds()
     logger.info(
-        f"{'🔥 THREAT' if result.is_malicious else '✅ CLEAN'} "
+        f"{'THREAT' if result.is_malicious else 'CLEAN'} "
         f"{request.client_ip} {request.method} {request.path} "
         f"(confidence: {result.confidence:.2f}, {duration:.2f}s)"
     )
@@ -290,7 +290,7 @@ def health():
 @app.on_event("startup")
 async def startup():
     logger.info("=" * 60)
-    logger.info("🧠 AI Security Server Starting")
+    logger.info("AI Security Server Starting")
     logger.info("=" * 60)
     logger.info(f"Ollama: {'✓ Enabled' if Config.USE_OLLAMA else '✗ Disabled'}")
     if Config.USE_OLLAMA:

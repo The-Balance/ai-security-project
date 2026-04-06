@@ -344,15 +344,14 @@
             transform: scale(1.02);
             box-shadow: 0 0 10px var(--accent-glow);
         }
-        
+
         .admin-panel button.btn-danger {
             background: var(--danger);
         }
-        
+
         .admin-panel button.btn-danger:hover {
             box-shadow: 0 0 10px var(--danger);
         }
-
     </style>
 </head>
 
@@ -405,8 +404,7 @@
         </div>
 
         <div class="admin-panel">
-            <h3>🛡️ Threat Management Control</h3>
-            <input type="password" id="admin-api-key" placeholder="Enter ADMIN_API_KEY">
+            <h3>Threat Management Control</h3>
             <input type="text" id="target-ip" placeholder="Target IP Address">
             <button onclick="executeAdminAction('block')" class="btn-danger">Block IP</button>
             <button onclick="executeAdminAction('unblock')">Unblock IP</button>
@@ -537,11 +535,10 @@
 
         // Admin functionality
         async function executeAdminAction(action) {
-            const apiKey = document.getElementById('admin-api-key').value;
             const targetIp = document.getElementById('target-ip').value.trim();
 
-            if (!apiKey || !targetIp) {
-                alert("Please enter both the API Key and the Target IP.");
+            if (!targetIp) {
+                alert("Please enter the Target IP.");
                 return;
             }
 
@@ -549,14 +546,13 @@
                 const response = await fetch(`/api/admin/${action}`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ ip: targetIp })
                 });
 
                 const result = await response.json();
-                
+
                 if (response.ok) {
                     alert('Command Successful: ' + result.message);
                     fetchDashboardData(); // Rapid refresh
@@ -564,7 +560,7 @@
                 } else {
                     alert('Failed: ' + (result.detail || 'Access Denied'));
                 }
-            } catch(e) {
+            } catch (e) {
                 alert('Connection error with Dashboard Backend.');
             }
         }

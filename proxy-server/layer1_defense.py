@@ -113,6 +113,7 @@ class Layer1Defense:
         max_requests = self.config['rate_limit']['max_requests']
         
         key = f"ratelimit:{ip}"
+        window_start = current_time - window
         
         # Atomically remove old entries and count requests in the current window
         pipeline = self.redis.pipeline()
@@ -160,6 +161,8 @@ class Layer1Defense:
         increment = self.config['reputation']['strike_increments'].get(reason, 5)
         
         key = f"reputation:{ip}"
+        
+        decay_hours = self.config['reputation']['decay_hours']
         
         pipeline = self.redis.pipeline()
         pipeline.incrby(key, increment)
