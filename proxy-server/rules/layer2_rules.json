@@ -20,12 +20,32 @@
                 "' OR '1'='1",
                 "admin'--",
                 "' UNION SELECT NULL",
-                "1' AND '1'='1"
+                "1' AND '1'='1",
+                "'OR'",
+                "'OR(",
+                "')--",
+                "'='",
+                "'a'='a",
+                "'x'='x",
+                "' AND '1'='1",
+                "OR 'a'='a",
+                "OR('a'='a')",
+                "SLEEP(",
+                "BENCHMARK(",
+                "WAITFOR DELAY",
+                "HAVING 1=1",
+                "GROUP BY",
+                "ORDER BY 1--"
             ],
             "regex_patterns": [
                 "(?i)(union\\s+select|drop\\s+table|insert\\s+into)",
                 "(?i)(exec\\s*\\(|execute\\s*\\()",
-                "(?i)(or\\s+['\"]?1['\"]?\\s*=\\s*['\"]?1)"
+                "(?i)(or\\s+['\"]?1['\"]?\\s*=\\s*['\"]?1)",
+                "(?i)['\"]\\s*OR\\s*\\(?\\s*['\"]?\\w+['\"]?\\s*=\\s*['\"]?\\w+['\"]?\\s*\\)?",
+                "(?i)(sleep\\s*\\(|benchmark\\s*\\(|waitfor\\s+delay)",
+                "(?i)('\\s*;\\s*(DROP|ALTER|CREATE|INSERT|UPDATE|DELETE))",
+                "(?i)(HAVING\\s+\\d+\\s*=\\s*\\d+)",
+                "(?i)(ORDER\\s+BY\\s+\\d+\\s*--)"
             ],
             "action": "block",
             "log_level": "critical"

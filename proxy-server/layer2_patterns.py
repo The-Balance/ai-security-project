@@ -5,6 +5,7 @@ Layer 2 Defense - Pattern-Based Attack Detection
 - Command injection detection
 - Path traversal detection
 - File upload validation
+- Dynamic AI-learned patterns (fed from Layer 3)
 """
 
 import re
@@ -12,16 +13,18 @@ import json
 import logging
 from typing import Dict, List, Tuple, Optional
 from pathlib import Path
+from difflib import SequenceMatcher
 
 logger = logging.getLogger(__name__)
 
 
 class Layer2PatternMatcher:
-    def __init__(self, rules_file: str = "rules/layer2_rules.json"):
+    def __init__(self, rules_file: str = "rules/layer2_rules.json", redis_client=None):
         """Load attack patterns from JSON configuration"""
         self.rules_file = rules_file
         self.patterns = {}
         self.compiled_regex = {}
+        self.redis = redis_client  # For AI-learned dynamic patterns
         
         self.load_rules()
         
@@ -106,8 +109,64 @@ class Layer2PatternMatcher:
         threats.extend(self._check_user_agent(headers))
         threats.extend(self._check_http_method(method))
         
+        # Check AI-learned dynamic patterns from Redis
+        threats.extend(self._check_ai_learned_patterns(full_content, body))
+        
         is_malicious = len(threats) > 0
         return is_malicious, threats
+
+    def _check_ai_learned_patterns(self, full_content: str, body: Optional[str] = None) -> List[Dict]:
+        """
+        Check request against patterns learned by AI (Layer 3).
+        These are stored in Redis by the AI feedback loop.
+        Uses similarity matching to catch variations of known attacks.
+        """
+        threats = []
+        
+        if not self.redis or not body:
+            return threats
+        
+        try:
+            # Get recent AI-learned patterns from Redis
+            learned = self.redis.lrange("ai:learned_patterns", 0, 99)
+            
+            for pattern_json in learned:
+                try:
+                    pattern = json.loads(pattern_json)
+                    stored_body = pattern.get('body_snippet', '')
+                    
+                    if not stored_body:
+                        continue
+                    
+                    # Similarity check: catch variations of the same attack
+                    similarity = SequenceMatcher(
+                        None, body.lower(), stored_body.lower()
+                    ).ratio()
+                    
+                    if similarity >= 0.6:  # 60% similarity threshold
+                        threats.append({
+                            'type': f"ai_learned_{pattern.get('threat_type', 'unknown')}",
+                            'severity': 'critical',
+                            'risk_score': 90,
+                            'category': 'ai_learned',
+                            'matched_pattern': f"Similar to AI-detected attack (similarity: {similarity:.0%})",
+                            'original_reason': pattern.get('reason', ''),
+                            'action': 'block'
+                        })
+                        logger.warning(
+                            f"🧠 AI-learned pattern matched! "
+                            f"Similarity: {similarity:.0%} to previously detected "
+                            f"{pattern.get('threat_type', 'unknown')} attack"
+                        )
+                        break  # One match is enough
+                
+                except (json.JSONDecodeError, TypeError):
+                    continue
+        
+        except Exception as e:
+            logger.error(f"Error checking AI-learned patterns: {e}")
+        
+        return threats
 
     def _prepare_content(self, method: str, path: str, headers: Dict, 
                         body: Optional[str], query_params: Optional[Dict]) -> str:

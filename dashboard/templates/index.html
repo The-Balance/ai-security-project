@@ -84,7 +84,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 3rem;
+            margin-bottom: 2rem;
             padding: 1rem 0;
             border-bottom: 1px solid var(--glass-border);
         }
@@ -163,6 +163,76 @@
             }
         }
 
+        /* Tabs Nav */
+        .tabs-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .tabs-nav-group {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .tab-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-muted);
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .tab-btn.active {
+            background: var(--accent-glow);
+            color: #fff;
+            border-color: var(--accent-glow);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
+
+        .btn-logout {
+            color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-logout:hover {
+            color: #fff;
+            background: var(--danger);
+            border-color: var(--danger);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         /* Glassmorphism Cards */
         .glass-card {
             background: var(--glass-bg);
@@ -195,13 +265,17 @@
             gap: 1.5rem;
         }
 
+        .full-width-card {
+            grid-column: 1 / -1;
+        }
+
         @media (max-width: 768px) {
             .detailed-grid {
                 grid-template-columns: 1fr;
             }
         }
 
-        /* Typography & Values inside cards */
+        /* Typography & Values */
         .glass-card h3 {
             color: var(--text-muted);
             font-size: 1rem;
@@ -235,6 +309,23 @@
         /* Lists */
         ul.list {
             list-style: none;
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        ul.list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ul.list::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        ul.list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
         }
 
         ul.list li {
@@ -352,10 +443,76 @@
         .admin-panel button.btn-danger:hover {
             box-shadow: 0 0 10px var(--danger);
         }
+
+        /* Warning Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(5px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--warning);
+            border-radius: 16px;
+            padding: 2.5rem;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(245, 158, 11, 0.2);
+            animation: popIn 0.3s ease;
+        }
+
+        .modal-card button {
+            background: var(--accent-glow);
+            color: #fff;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 
 <body>
+
+    <!-- Warning Modal -->
+    <div id="warning-modal" class="modal-overlay">
+        <div class="modal-card">
+            <h2 style="color: var(--warning); margin-bottom: 1.5rem;">⚠️ Warning</h2>
+            <p id="warning-message" style="margin-bottom: 2rem; line-height: 1.5; font-size: 1.1rem; color: #fff;"></p>
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <button onclick="closeModal()"
+                    style="background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border);">Cancel</button>
+                <button onclick="confirmRestore()" style="background: var(--danger);">Yes, Restore Reputation</button>
+            </div>
+        </div>
+    </div>
 
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
@@ -369,49 +526,114 @@
             </div>
         </header>
 
-        <div class="stats-grid">
-            <div class="glass-card">
-                <h3>Total Intercepts</h3>
-                <div class="stat-value" id="val-total-attacks">0</div>
+        <!-- Navigation Tabs -->
+        <nav class="tabs-nav">
+            <div class="tabs-nav-group">
+                <button class="tab-btn active" id="btn-dashboard" onclick="switchTab('dashboard')">Dashboard</button>
+                <button class="tab-btn" id="btn-history" onclick="switchTab('history')">History</button>
+                <button class="tab-btn" id="btn-blocks" onclick="switchTab('blocks')">Blocks & Bans</button>
             </div>
-            <div class="glass-card">
-                <h3>Active Blocks (Temp)</h3>
-                <div class="stat-value danger" id="val-temp-blocks">0</div>
+            <button class="tab-btn btn-logout" onclick="logout()">Logout</button>
+        </nav>
+
+        <!-- Tab: Dashboard -->
+        <div id="tab-dashboard" class="tab-content active">
+            <div class="stats-grid">
+                <div class="glass-card">
+                    <h3>Total Intercepts</h3>
+                    <div class="stat-value" id="val-total-attacks">0</div>
+                </div>
+                <div class="glass-card">
+                    <h3>Active Blocks (Temp)</h3>
+                    <div class="stat-value danger" id="val-temp-blocks">0</div>
+                </div>
+                <div class="glass-card">
+                    <h3>Permanent Bans</h3>
+                    <div class="stat-value danger" id="val-perm-blocks">0</div>
+                </div>
+                <div class="glass-card">
+                    <h3>Active Rate Limits</h3>
+                    <div class="stat-value" id="val-rate-limits">0</div>
+                </div>
             </div>
-            <div class="glass-card">
-                <h3>Permanent Bans</h3>
-                <div class="stat-value danger" id="val-perm-blocks">0</div>
-            </div>
-            <div class="glass-card">
-                <h3>Active Rate Limits</h3>
-                <div class="stat-value" id="val-rate-limits">0</div>
+
+            <div class="detailed-grid">
+                <div class="glass-card full-width-card">
+                    <h2>Top Offenders (IP Reputation)</h2>
+                    <ul id="top-offenders-list" class="list">
+                        <li class="empty-state">Loading data...</li>
+                    </ul>
+                </div>
             </div>
         </div>
 
-        <div class="detailed-grid">
+        <!-- Tab: History -->
+        <div id="tab-history" class="tab-content">
             <div class="glass-card">
-                <h2>Top Offenders (IP Reputation)</h2>
-                <ul id="top-offenders-list" class="list">
-                    <li class="empty-state">Loading data...</li>
-                </ul>
-            </div>
-            <div class="glass-card">
-                <h2>Recent Attack Logs</h2>
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.8rem;">
+                    <h2 style="margin-bottom: 0; border-bottom: none; padding-bottom: 0;">Log History</h2>
+                    <button onclick="clearHistory()" class="tab-btn btn-logout" style="padding: 0.5rem 1rem;">Clear
+                        Logs</button>
+                </div>
                 <ul id="recent-attacks-list" class="list">
                     <li class="empty-state">Loading data...</li>
                 </ul>
             </div>
         </div>
 
-        <div class="admin-panel">
-            <h3>Threat Management Control</h3>
-            <input type="text" id="target-ip" placeholder="Target IP Address">
-            <button onclick="executeAdminAction('block')" class="btn-danger">Block IP</button>
-            <button onclick="executeAdminAction('unblock')">Unblock IP</button>
+        <!-- Tab: Blocks & Bans -->
+        <div id="tab-blocks" class="tab-content">
+            <div class="detailed-grid">
+                <div class="glass-card">
+                    <h2>Active Blocks (Temp)</h2>
+                    <ul id="active-blocks-list" class="list">
+                        <li class="empty-state">Loading data...</li>
+                    </ul>
+                </div>
+                <div class="glass-card">
+                    <h2>Permanent Bans</h2>
+                    <ul id="permanent-bans-list" class="list">
+                        <li class="empty-state">Loading data...</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="admin-panel">
+                <h3>Threat Management Control</h3>
+                <input type="text" id="target-ip" placeholder="Target IP Address">
+                <input type="number" id="block-duration" placeholder="Hours (Optional)"
+                    style="min-width: 130px; flex: 0.4;">
+                <button onclick="executeAdminAction('block')" class="btn-danger">Block IP</button>
+                <button onclick="executeAdminAction('unblock')">Unblock IP</button>
+                <button onclick="executeAdminAction('restore_reputation')">Restore Reputation</button>
+            </div>
         </div>
+
     </div>
 
     <script>
+        // Tab switching logic
+        function switchTab(tabId) {
+            // Remove active class from all tabs and contents
+            document.querySelectorAll('.tab-btn:not(.btn-logout)').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+
+            // Add active class to target tab and content
+            document.getElementById(`btn-${tabId}`).classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+        }
+
+        // Logout logic
+        async function logout() {
+            try {
+                await fetch('/logout', { method: 'POST' });
+                window.location.reload();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
         // Number Animation Helper
         function animateValue(obj, start, end, duration) {
             if (start === end) return;
@@ -444,9 +666,24 @@
             return Math.floor(seconds / 3600) + 'h ago';
         }
 
+        function formatTTL(seconds) {
+            if (seconds <= 0) return 'Expired';
+            let h = Math.floor(seconds / 3600);
+            let m = Math.floor((seconds % 3600) / 60);
+            if (h > 0) return `${h}h ${m}m`;
+            return `${m}m`;
+        }
+
         async function fetchDashboardData() {
             try {
                 const response = await fetch('/api/stats');
+
+                // Check for unauthorized access
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+
                 const data = await response.json();
 
                 if (data.error) {
@@ -522,6 +759,46 @@
                     attacksList.innerHTML = '<li class="empty-state">No recent attacks logged.</li>';
                 }
 
+                // Update Active Blocks List
+                const activeBlocksList = document.getElementById('active-blocks-list');
+                if (data.active_blocks_list && data.active_blocks_list.length > 0) {
+                    activeBlocksList.innerHTML = data.active_blocks_list.map(b => {
+                        return `
+                        <li>
+                            <div>
+                                <div style="font-family: monospace; color: #fff; margin-bottom: 4px;">${b.ip}</div>
+                                <div class="time-muted">TTL: ${formatTTL(b.ttl)}</div>
+                            </div>
+                            <div class="tag tag-warning" style="max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                ${b.reason || 'Temp Blocked'}
+                            </div>
+                        </li>
+                        `;
+                    }).join('');
+                } else {
+                    activeBlocksList.innerHTML = '<li class="empty-state">No active blocks.</li>';
+                }
+
+                // Update Permanent Bans List
+                const permBansList = document.getElementById('permanent-bans-list');
+                if (data.permanent_blocks_list && data.permanent_blocks_list.length > 0) {
+                    permBansList.innerHTML = data.permanent_blocks_list.map(b => {
+                        return `
+                        <li>
+                            <div>
+                                <div style="font-family: monospace; color: #fff; margin-bottom: 4px;">${b.ip}</div>
+                                <div class="time-muted">Permanent</div>
+                            </div>
+                            <div class="tag tag-critical" style="max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                ${b.reason || 'Banned'}
+                            </div>
+                        </li>
+                        `;
+                    }).join('');
+                } else {
+                    permBansList.innerHTML = '<li class="empty-state">No permanent bans.</li>';
+                }
+
             } catch (err) {
                 console.error("Dashboard error:", err);
                 document.getElementById('status-badge').className = 'status-badge error';
@@ -533,7 +810,44 @@
         fetchDashboardData();
         setInterval(fetchDashboardData, 2000);
 
-        // Admin functionality
+        async function clearHistory() {
+            if (!confirm("Are you sure you want to clear the attack history?")) return;
+            try {
+                const response = await fetch(`/api/admin/clear_history`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    alert('History cleared.');
+                    fetchDashboardData();
+                } else {
+                    alert('Failed to clear history.');
+                }
+            } catch (e) {
+                alert('Connection error.');
+            }
+        }
+
+        // Modal Logic
+        let pendingIp = null;
+        function showWarningModal(ip) {
+            const modal = document.getElementById('warning-modal');
+            const msg = document.getElementById('warning-message');
+            msg.innerHTML = `Are you sure you want to restrore reputation?<br><br>This will remove all bans and restores <strong style="color:var(--warning)">${ip}</strong>'s reputation completely.`;
+            modal.classList.add('active');
+            pendingIp = ip;
+        }
+        function closeModal() {
+            document.getElementById('warning-modal').classList.remove('active');
+            pendingIp = null;
+        }
+        async function confirmRestore() {
+            if (!pendingIp) return;
+            const ipToRestore = pendingIp;
+            closeModal();
+            await doAdminRequest('restore_reputation', ipToRestore);
+        }
+
+        // Admin functionality wrapper
         async function executeAdminAction(action) {
             const targetIp = document.getElementById('target-ip').value.trim();
 
@@ -542,21 +856,43 @@
                 return;
             }
 
+            if (action === 'restore_reputation') {
+                showWarningModal(targetIp);
+                return; // Stop and wait for confirmation
+            }
+
+            await doAdminRequest(action, targetIp);
+        }
+
+        async function doAdminRequest(action, targetIp) {
+            const data = { ip: targetIp };
+            // Legacy check from earlier if they re-add duration feature
+            if (action === 'block') {
+                const durationVal = document.getElementById('block-duration');
+                if (durationVal && durationVal.value && parseInt(durationVal.value) > 0) {
+                    data.duration = parseInt(durationVal.value);
+                }
+            }
+
             try {
                 const response = await fetch(`/api/admin/${action}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ ip: targetIp })
+                    body: JSON.stringify(data)
                 });
 
                 const result = await response.json();
 
                 if (response.ok) {
-                    alert('Command Successful: ' + result.message);
-                    fetchDashboardData(); // Rapid refresh
+                    // Fast UI closure & Update
+                    fetchDashboardData();
                     document.getElementById('target-ip').value = '';
+                    const durationVal = document.getElementById('block-duration');
+                    if (durationVal) {
+                        durationVal.value = '';
+                    }
                 } else {
                     alert('Failed: ' + (result.detail || 'Access Denied'));
                 }

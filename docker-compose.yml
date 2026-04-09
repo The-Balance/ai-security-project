@@ -18,6 +18,16 @@ services:
       retries: 3
     restart: unless-stopped
 
+  # ==================== WEB SERVER - Juice Shop ====================
+  web-server:
+    image: bkimminich/juice-shop
+    container_name: juice-shop
+    networks:
+      waf-network:
+        ipv4_address: 192.168.100.80
+    # No external ports — only accessible through the WAF proxy
+    restart: always
+
   # ==================== PROXY - WAF Gateway ====================
   proxy-server:
     build:
@@ -32,7 +42,7 @@ services:
       - REDIS_PORT=6379
 
       # Target website to protect
-      - TARGET_WEBSITE=${TARGET_WEBSITE}
+      - TARGET_WEBSITE=http://192.168.100.80:3000
 
       # AI server
       - AI_SERVER_URL=http://192.168.100.20:8000
@@ -65,9 +75,9 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
-      - USE_OLLAMA=${USE_OLLAMA:-false}
+      - OLLAMA_HOST=${OLLAMA_HOST}
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
+      - USE_OLLAMA=${USE_OLLAMA}
       - REDIS_HOST=192.168.100.10
     networks:
       waf-network:
@@ -91,7 +101,8 @@ services:
     environment:
       - REDIS_HOST=192.168.100.10
       - REDIS_PORT=6379
-      - ADMIN_API_KEY=${ADMIN_API_KEY:-admin123}
+      - ADMIN_API_KEY=${ADMIN_API_KEY}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     networks:
       waf-network:
         ipv4_address: 192.168.100.40

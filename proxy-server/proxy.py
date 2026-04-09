@@ -43,7 +43,7 @@ class Config:
     LAYER3_ENABLED = os.getenv('LAYER3_ENABLED', 'false').lower() == 'true'  # AI layer off by default
     
     # Security settings
-    LAYER3_ASYNC = True  # Run AI analysis async (don't block request)
+    LAYER3_ASYNC = True  # Async mode: AI analyzes in background, feeds results to Layer 1 & 2
     LOG_ALL_REQUESTS = True
     INCLUDE_RULE_INFO = False  # Don't expose security rules to attackers
 
@@ -62,9 +62,10 @@ layer1 = Layer1Defense(
     redis_port=Config.REDIS_PORT
 ) if Config.LAYER1_ENABLED else None
 
-# Layer 2: Pattern matching
+# Layer 2: Pattern matching (with Redis for AI-learned patterns)
 layer2 = Layer2PatternMatcher(
-    rules_file="rules/layer2_rules.json"
+    rules_file="rules/layer2_rules.json",
+    redis_client=layer1.redis if layer1 else None
 ) if Config.LAYER2_ENABLED else None
 
 # HTTP client for forwarding requests with optimized connection pooling
@@ -203,8 +204,8 @@ async def security_gateway(request: Request, call_next):
 
 async def analyze_with_ai(request: Request, client_ip: str) -> Optional[Dict]:
     """
-    Send request to AI server for deep analysis
-    Returns: AI analysis result or None if failed
+    Send request to AI server for deep analysis.
+    When threats are found, feeds back into Layer 1 (block IP) and Layer 2 (learn pattern).
     """
     try:
         # Prepare payload
@@ -232,11 +233,58 @@ async def analyze_with_ai(request: Request, client_ip: str) -> Optional[Dict]:
                 result = response.json()
                 
                 if result.get('is_malicious'):
-                    logger.warning(f"🤖 AI flagged {client_ip}: {result.get('reason')}")
+                    threat_type = result.get('threat_type', 'unknown')
+                    reason = result.get('reason', 'AI detected threat')
+                    confidence = result.get('confidence', 0.0)
                     
-                    # Add reputation strike
+                    logger.warning(
+                        f"🤖 AI DETECTED THREAT from {client_ip}: "
+                        f"{reason} (type={threat_type}, confidence={confidence:.2f})"
+                    )
+                    
+                    # ===== FEEDBACK TO LAYER 1: Block this attacker =====
                     if layer1:
+                        # Add heavy reputation strike
                         layer1.add_reputation_strike(client_ip, 'ai_flagged')
+                        
+                        # If confidence is high enough, block IP immediately
+                        if confidence >= 0.7:
+                            layer1.block_ip(
+                                client_ip,
+                                f"AI Layer 3: {reason} (confidence: {confidence:.2f})",
+                                duration_hours=2
+                            )
+                            logger.warning(
+                                f"🔒 AI → Layer 1: Blocked IP {client_ip} for 2h "
+                                f"(confidence: {confidence:.2f})"
+                            )
+                    
+                    # ===== FEEDBACK TO LAYER 2: Store learned pattern =====
+                    if layer1 and body:
+                        # Store the malicious payload in Redis so Layer 2 can
+                        # check against dynamic (AI-learned) patterns
+                        import json as json_module
+                        learned_pattern = {
+                            'source': 'ai_layer3',
+                            'threat_type': threat_type,
+                            'method': request.method,
+                            'path': str(request.url.path),
+                            'body_snippet': body[:500] if body else None,
+                            'confidence': confidence,
+                            'reason': reason,
+                            'detected_at': datetime.now().isoformat(),
+                            'client_ip': client_ip
+                        }
+                        layer1.redis.lpush(
+                            "ai:learned_patterns",
+                            json_module.dumps(learned_pattern)
+                        )
+                        layer1.redis.ltrim("ai:learned_patterns", 0, 499)
+                        
+                        logger.info(
+                            f"📚 AI → Layer 2: Stored learned pattern "
+                            f"(type={threat_type}) for future detection"
+                        )
                 
                 return result
     
